@@ -85,5 +85,5 @@ The counter and an automation that resets it to 0 after 30 minutes without anyon
 - 8x8 pixels: single people passing one after another work, tightly packed groups and opposing traffic do not.
 - The door sensors only see the doorway, not the room. People sitting still in the room are counted away by the idle reset; add a room presence sensor (see the commented condition in the automation) to avoid that.
 - The per-device count is lost on reboot (`id(amg)->set_count(n)` sets it).
-- The component auto-loads `web_server_base`. The web handler is only active if `image_endpoint` is set.
+- The image endpoints use ESPHome's shared HTTP server (`web_server_base`), which is loaded automatically and listens on port 80. You do **not** need the `web_server:` component, but it can run alongside. The handler is only active if `image_endpoint` is set.
 - Compile-tested with ESPHome 2026.9.1 (ESP32, ESP-IDF). Not yet tested on real hardware.

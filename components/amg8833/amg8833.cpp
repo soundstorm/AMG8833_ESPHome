@@ -28,8 +28,11 @@ void AMG8833Component::setup() {
   this->write_byte(REG_FPSC, 0x00);  // 10 fps
   delay(100);
 
-  if (this->base_ != nullptr)
+  if (this->base_ != nullptr) {
+    // init() is reference-counted: it starts the HTTP listener if no other component (web_server, ...) did yet.
+    this->base_->init();
     this->base_->add_handler(new AMG8833Handler(this));  // NOLINT
+  }
 }
 
 void AMG8833Component::dump_config() {

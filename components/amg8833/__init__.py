@@ -1,3 +1,5 @@
+import inspect
+
 from esphome import automation
 import esphome.codegen as cg
 import esphome.config_validation as cv
@@ -177,10 +179,20 @@ async def to_code(config):
         cg.add(var.set_web_server_base(base))
 
 
+# play() finishes immediately, so the action is synchronous. Older ESPHome versions
+# do not know the `synchronous` parameter yet.
+_ACTION_KWARGS = (
+    {"synchronous": True}
+    if "synchronous" in inspect.signature(automation.register_action).parameters
+    else {}
+)
+
+
 @automation.register_action(
     "amg8833.recalibrate",
     RecalibrateAction,
     maybe_simple_id({cv.GenerateID(): cv.use_id(AMG8833Component)}),
+    **_ACTION_KWARGS,
 )
 async def recalibrate_to_code(config, action_id, template_arg, args):
     var = cg.new_Pvariable(action_id, template_arg)
