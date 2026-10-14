@@ -1,0 +1,43 @@
+# Home Assistant package: one shared people counter for several doors.
+# Include it e.g. in configuration.yaml:
+#   homeassistant:
+#     packages:
+#       people: !include homeassistant/people_in_room.yaml
+#
+# Every ESPHome device calls counter.increment / counter.decrement.
+# minimum: 0 keeps the counter from going negative.
+
+counter:
+  people_in_room:
+    name: People in Room
+    icon: mdi:account-multiple
+    initial: 0
+    minimum: 0
+    step: 1
+    restore: true
+
+automation:
+  - alias: "Reset people counter when idle"
+    id: people_in_room_reset_when_idle
+    description: >
+      Resets the counter to 0 if it is above 0 and no person has been in view
+      at any door for 30 minutes (miscounts correct themselves this way).
+    mode: single
+    trigger:
+      - platform: template
+        # Add one line per door. Adjust the entity IDs to your devices.
+        value_template: >
+          {{ states('counter.people_in_room') | int(0) > 0
+             and is_state('binary_sensor.amg8833_door1_person_in_view', 'off')
+             and is_state('binary_sensor.amg8833_door2_person_in_view', 'off') }}
+        for: "00:30:00"
+    # Optional: also check a real room presence sensor (mmWave/PIR) so that
+    # people sitting still are not counted away:
+    # condition:
+    #   - condition: state
+    #     entity_id: binary_sensor.room_presence
+    #     state: "off"
+    action:
+      - service: counter.reset
+        target:
+          entity_id: counter.people_in_room

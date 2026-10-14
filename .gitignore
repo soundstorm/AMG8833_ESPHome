@@ -1,0 +1,21 @@
+# ESPHome
+.esphome/
+secrets.yaml
+*.bin
+*.elf
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# macOS / Editoren
+.DS_Store
+.idea/
+.vscode/
