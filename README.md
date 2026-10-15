@@ -63,6 +63,26 @@ button:
 
 Optional sensors: `entered`, `exited`, `count` (per device). Triggers: `on_enter`, `on_exit`.
 
+### Diagnostics: recording test frames
+For tuning (mounting, `axis`, `min_travel`, `warm_delta`) you can record what the sensor sees without touching Home Assistant or its database:
+
+```yaml
+logger:
+  level: DEBUG
+amg8833:
+  log_frames: true
+```
+
+```bash
+esphome logs device.yaml > frames.log
+python3 tools/parse_log.py frames.log          # frames.csv + crossings.csv
+python3 tools/parse_log.py frames.log --gif    # + frames.gif (needs numpy, matplotlib, pillow)
+```
+
+- Every frame (10 Hz) logs `FRAME,<ms>,<warm pixels>,<centroid>,<tracking>,<64 raw values>`. Raw values are in 0.25 °C steps, row by row. `warm = -1` marks warm-up frames.
+- Every finished movement logs `CROSSING,<start>,<end>,<travel>,<duration ms>,<frames>,<max warm pixels>,<enter|exit|ignored>`, also with `log_frames: false` (DEBUG level).
+- Switch `log_frames` off again afterwards: 10 lines per second are a lot of Wi-Fi and logger traffic.
+
 ### Several doors, one shared counter in Home Assistant
 Each door fires `on_enter` / `on_exit`. All devices increment or decrement the same Home Assistant `counter`:
 

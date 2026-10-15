@@ -36,6 +36,7 @@ amg8833:
     name: "Person in View"
   frame:                   # 64 pixels as hex string (128 characters)
     name: "AMG8833 Frame"
+  log_frames: false        # diagnostics: one DEBUG line per frame (needs logger level DEBUG), see tools/parse_log.py
   frame_min_temperature: 15
   frame_max_temperature: 35
   frame_interval: 1s

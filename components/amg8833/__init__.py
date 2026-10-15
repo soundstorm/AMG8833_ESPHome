@@ -27,6 +27,7 @@ CONF_VIEWER = "viewer"
 CONF_SCALE = "scale"
 CONF_MAX_TEMPERATURE = "max_temperature"
 CONF_FRAME = "frame"
+CONF_LOG_FRAMES = "log_frames"
 CONF_FRAME_MIN = "frame_min_temperature"
 CONF_FRAME_MAX = "frame_max_temperature"
 CONF_FRAME_INTERVAL = "frame_interval"
@@ -120,6 +121,7 @@ CONFIG_SCHEMA = (
             cv.Optional(CONF_TEMPERATURE): temp_schema,
             cv.Optional(CONF_MAX_TEMPERATURE): temp_schema,
             cv.Optional(CONF_FRAME): text_sensor.text_sensor_schema(),
+            cv.Optional(CONF_LOG_FRAMES, default=False): cv.boolean,
             cv.Optional(CONF_FRAME_MIN, default=10.0): cv.temperature,
             cv.Optional(CONF_FRAME_MAX, default=40.0): cv.temperature,
             cv.Optional(CONF_FRAME_INTERVAL, default="1s"): cv.positive_time_period_milliseconds,
@@ -149,6 +151,7 @@ async def to_code(config):
         cg.add(var.set_max_temperature_sensor(await sensor.new_sensor(config[CONF_MAX_TEMPERATURE])))
     if CONF_FRAME in config:
         cg.add(var.set_frame_text_sensor(await text_sensor.new_text_sensor(config[CONF_FRAME])))
+    cg.add(var.set_log_frames(config[CONF_LOG_FRAMES]))
     cg.add(var.set_frame_range(config[CONF_FRAME_MIN], config[CONF_FRAME_MAX]))
     cg.add(var.set_frame_interval(config[CONF_FRAME_INTERVAL]))
     if CONF_PRESENCE in config:

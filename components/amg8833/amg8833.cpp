@@ -39,6 +39,7 @@ void AMG8833Component::dump_config() {
   ESP_LOGCONFIG(TAG, "AMG8833:");
   LOG_I2C_DEVICE(this);
   LOG_UPDATE_INTERVAL(this);
+  ESP_LOGCONFIG(TAG, "  Frame logging: %s", YESNO(this->log_frames_));
   ESP_LOGCONFIG(TAG, "  People counting: %s", YESNO(this->counting_));
   if (this->counting_) {
     ESP_LOGCONFIG(TAG, "  Axis: %s%s, warm_delta: %.1f, min_pixels: %d, min_travel: %.1f, release_frames: %d, background_rate: %.3f, auto_recalibrate_after: %u ms",
@@ -49,7 +50,7 @@ void AMG8833Component::dump_config() {
   ESP_LOGCONFIG(TAG, "  Image endpoint: bmp=%s svg=%s viewer=%s scale=%d", YESNO(this->bmp_), YESNO(this->svg_),
                 YESNO(this->viewer_), this->scale_);
   LOG_SENSOR("  ", "Thermistor", this->thermistor_);
-  LOG_SENSOR("  ", "Max. Temperatur", this->max_temp_);
+  LOG_SENSOR("  ", "Max temperature", this->max_temp_);
 }
 
 bool AMG8833Component::read_frame_() {
@@ -63,6 +64,7 @@ bool AMG8833Component::read_frame_() {
     int16_t raw = ((buf[2 * i + 1] & 0x0F) << 8) | buf[2 * i];
     if (raw & 0x800)
       raw -= 4096;  // 12-bit two's complement
+    this->raw_[i] = raw;
     this->pixels_[i] = raw * 0.25f;
   }
   return true;
@@ -109,6 +111,7 @@ void AMG8833Component::process_frame_() {
                                  ? this->pixels_[i]
                                  : this->background_[i] + (this->pixels_[i] - this->background_[i]) / (this->warmup_frames_ + 1);
     this->warmup_frames_++;
+    this->log_frame_(-1, -1);  // -1 = warm-up, no detection yet
     return;
   }
 
@@ -125,6 +128,13 @@ void AMG8833Component::process_frame_() {
     }
   }
   bool present = n_warm >= this->min_pixels_;
+  float centroid = -1;
+  if (sum_w > 0) {
+    centroid = sum_pos / sum_w;
+    if (this->invert_)
+      centroid = 7.0f - centroid;
+  }
+  this->log_frame_(n_warm, centroid);
 
   // Only track the background while nobody is in view (slowly, about 1/200 per frame)
   if (!present && !this->active_) {
@@ -153,18 +163,24 @@ void AMG8833Component::process_frame_() {
     return;
 
   if (present) {
-    float pos = sum_pos / sum_w;
-    if (this->invert_)
-      pos = 7.0f - pos;
+    float pos = centroid;
     if (!this->active_) {
       this->active_ = true;
       this->start_pos_ = pos;
+      this->start_ms_ = millis();
+      this->active_frames_ = 0;
+      this->max_warm_ = 0;
     }
+    this->active_frames_++;
+    this->max_warm_ = std::max(this->max_warm_, n_warm);
     this->last_pos_ = pos;
     this->lost_ = 0;
   } else if (this->active_) {
     if (++this->lost_ >= this->release_frames_) {
       float travel = this->last_pos_ - this->start_pos_;
+      const char *result = travel >= this->min_travel_ ? "enter" : (travel <= -this->min_travel_ ? "exit" : "ignored");
+      ESP_LOGD(TAG, "CROSSING,%.2f,%.2f,%.2f,%u,%d,%d,%s", this->start_pos_, this->last_pos_, travel,
+               (unsigned) (millis() - this->start_ms_), this->active_frames_, this->max_warm_, result);
       if (travel >= this->min_travel_) {
         this->entered_++;
         this->count_++;
@@ -176,14 +192,29 @@ void AMG8833Component::process_frame_() {
           this->count_--;
         ESP_LOGI(TAG, "Person left (travel %.1f), in room: %d", travel, this->count_);
         this->exit_callbacks_.call();
-      } else {
-        ESP_LOGD(TAG, "Movement ignored (travel %.1f < %.1f)", travel, this->min_travel_);
       }
       this->active_ = false;
       this->counts_dirty_ = true;
     }
   }
   this->publish_counts_();
+}
+
+void AMG8833Component::log_frame_(int n_warm, float pos) {
+  if (!this->log_frames_)
+    return;
+  // FRAME,<ms>,<warm pixels>,<centroid>,<tracking>,<64 raw values in 0.25 °C steps, row by row>
+  std::string line;
+  line.reserve(300);
+  char tmp[16];
+  snprintf(tmp, sizeof(tmp), "%u,%d,%.2f,%d", (unsigned) millis(), n_warm, pos, this->active_ ? 1 : 0);
+  line += "FRAME,";
+  line += tmp;
+  for (int i = 0; i < 64; i++) {
+    snprintf(tmp, sizeof(tmp), ",%d", this->raw_[i]);
+    line += tmp;
+  }
+  ESP_LOGD(TAG, "%s", line.c_str());
 }
 
 void AMG8833Component::recalibrate() {

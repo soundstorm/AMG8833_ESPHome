@@ -70,6 +70,7 @@ class AMG8833Component : public PollingComponent, public i2c::I2CDevice {
   }
   void add_on_enter_callback(std::function<void()> &&cb) { this->enter_callbacks_.add(std::move(cb)); }
   void add_on_exit_callback(std::function<void()> &&cb) { this->exit_callbacks_.add(std::move(cb)); }
+  void set_log_frames(bool log_frames) { log_frames_ = log_frames; }
   void set_web_server_base(web_server_base::WebServerBase *base) { base_ = base; }
 
   /// Relearns the background (takes about 3 s, no counting meanwhile). The room should be empty.
@@ -90,6 +91,7 @@ class AMG8833Component : public PollingComponent, public i2c::I2CDevice {
   void process_frame_();
   void publish_counts_();
   void publish_frame_();
+  void log_frame_(int n_warm, float pos);
 
   sensor::Sensor *thermistor_{nullptr};
   sensor::Sensor *max_temp_{nullptr};
@@ -106,6 +108,11 @@ class AMG8833Component : public PollingComponent, public i2c::I2CDevice {
   int scale_{8};
   std::vector<uint8_t> bmp_buf_;
 
+  bool log_frames_{false};
+  int16_t raw_[64]{};
+  uint32_t start_ms_{0};
+  int active_frames_{0};
+  int max_warm_{0};
   float pixels_[64]{};
   float background_[64]{};
   float thermistor_temp_{0};
