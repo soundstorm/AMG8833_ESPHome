@@ -39,7 +39,8 @@ class AMG8833Component : public PollingComponent, public i2c::I2CDevice {
   void setup() override;
   void update() override;
   void dump_config() override;
-  float get_setup_priority() const override { return setup_priority::DATA; }
+  // Must run after the network stack (esp_netif_init) is up: setup() starts the HTTP server for the image endpoints.
+  float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
   void set_thermistor_sensor(sensor::Sensor *s) { thermistor_ = s; }
   void set_max_temperature_sensor(sensor::Sensor *s) { max_temp_ = s; }
