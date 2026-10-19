@@ -29,7 +29,8 @@ def parse(path):
                 if len(parts) == 4 + 64:
                     ms, warm, centroid, tracking = parts[:4]
                     temps = [int(v) * 0.25 for v in parts[4:]]
-                    frames.append([int(ms), int(warm), float(centroid), int(tracking)] + temps)
+                    # Firmware before the buffer fix cut off the tracking flag when the centroid was -1.00.
+                    frames.append([int(ms), int(warm), float(centroid), int(tracking or 0)] + temps)
             elif "CROSSING," in line:
                 parts = line.split("CROSSING,", 1)[1].strip().split(",")
                 if len(parts) == 7:

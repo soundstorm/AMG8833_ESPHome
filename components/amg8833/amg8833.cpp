@@ -206,7 +206,7 @@ void AMG8833Component::log_frame_(int n_warm, float pos) {
   // FRAME,<ms>,<warm pixels>,<centroid>,<tracking>,<64 raw values in 0.25 °C steps, row by row>
   std::string line;
   line.reserve(300);
-  char tmp[16];
+  char tmp[32];
   snprintf(tmp, sizeof(tmp), "%u,%d,%.2f,%d", (unsigned) millis(), n_warm, pos, this->active_ ? 1 : 0);
   line += "FRAME,";
   line += tmp;
