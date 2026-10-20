@@ -51,6 +51,8 @@ amg8833:
     warm_delta: 2.0        # °C above the learned background
     min_pixels: 3
     min_travel: 2.0        # pixels of travel required to count as a crossing
+    door_zone: 1.5         # count only passes that touch the door edge (position 0 of the axis);
+                           # 0 = off. With invert: false, the door is at row/column 0.
     release_frames: 3
     background_rate: 0.005       # how fast the background follows slow temperature changes (0 = never)
     auto_recalibrate_after: 2min # relearn if "presence" lasts this long (0s = off)

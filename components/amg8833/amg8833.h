@@ -52,7 +52,8 @@ class AMG8833Component : public PollingComponent, public i2c::I2CDevice {
   void set_frame_range(float min, float max) { frame_min_ = min; frame_max_ = max; }
   void set_frame_interval(uint32_t ms) { frame_interval_ = ms; }
   void set_counting(Axis axis, bool invert, float warm_delta, int min_pixels, float min_travel, int release_frames,
-                    float background_rate, uint32_t auto_recalibrate_ms) {
+                    float background_rate, uint32_t auto_recalibrate_ms, float door_zone) {
+    door_zone_ = door_zone;
     background_rate_ = background_rate;
     auto_recalibrate_ms_ = auto_recalibrate_ms;
     counting_ = true;
@@ -132,6 +133,7 @@ class AMG8833Component : public PollingComponent, public i2c::I2CDevice {
   int min_pixels_{3};
   float min_travel_{2.0f};
   int release_frames_{3};
+  float door_zone_{0.0f};
   float background_rate_{0.005f};
   uint32_t auto_recalibrate_ms_{120000};
   uint32_t present_since_{0};

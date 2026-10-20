@@ -48,6 +48,15 @@ Add the **Generic Camera** integration with *Still Image URL* `http://<esp-ip>/t
 
 Mounting: sensor above the door, looking down, with one pixel axis pointing in walking direction. The background is learned during the first ~3 s after boot, so the room should be empty then.
 
+### Door zone (`door_zone`)
+By default only the net movement along `axis` decides. Someone who enters the view from the side and walks away from the door would then count as "entered" without ever passing the door. With `door_zone` (in pixels, e.g. `1.5`; `0` = off) a pass only counts if it touches the door edge:
+
+- **Enter:** the movement starts within `door_zone` of the door edge and leads away from it (by at least `min_travel`).
+- **Exit:** the movement leads towards the door edge by at least `min_travel` and ends within `door_zone` of it.
+- Everything else is logged as `ignored` or, if the travel was large enough but the door edge was not touched, as `ignored_side` in the `CROSSING` log line.
+
+The door edge is **position 0 of the axis** after `invert` is applied: with `invert: false`, row 0 (for `rows`) or column 0 (for `columns`). Use `invert: true` if the door is at the other edge.
+
 ### Background learning and recalibration
 - **Continuous adaptation:** While nobody is in view, the background slowly follows temperature changes. `background_rate` (default `0.005`, `0` = off) sets how fast.
 - **Automatic recalibration:** If "presence" lasts longer than `auto_recalibrate_after` (default `2min`, `0s` = off), for example because a heater or sunlight changed the scene, the background is relearned.

@@ -3,6 +3,7 @@
 #include "esphome/core/hal.h"
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 
 namespace esphome {
 namespace amg8833 {
@@ -42,9 +43,9 @@ void AMG8833Component::dump_config() {
   ESP_LOGCONFIG(TAG, "  Frame logging: %s", YESNO(this->log_frames_));
   ESP_LOGCONFIG(TAG, "  People counting: %s", YESNO(this->counting_));
   if (this->counting_) {
-    ESP_LOGCONFIG(TAG, "  Axis: %s%s, warm_delta: %.1f, min_pixels: %d, min_travel: %.1f, release_frames: %d, background_rate: %.3f, auto_recalibrate_after: %u ms",
+    ESP_LOGCONFIG(TAG, "  Axis: %s%s, warm_delta: %.1f, min_pixels: %d, min_travel: %.1f, door_zone: %.1f, release_frames: %d, background_rate: %.3f, auto_recalibrate_after: %u ms",
                   this->axis_ == AXIS_COLUMNS ? "columns" : "rows", this->invert_ ? " (inverted)" : "",
-                  this->warm_delta_, this->min_pixels_, this->min_travel_, this->release_frames_, this->background_rate_,
+                  this->warm_delta_, this->min_pixels_, this->min_travel_, this->door_zone_, this->release_frames_, this->background_rate_,
                   (unsigned) this->auto_recalibrate_ms_);
   }
   ESP_LOGCONFIG(TAG, "  Image endpoint: bmp=%s svg=%s viewer=%s scale=%d", YESNO(this->bmp_), YESNO(this->svg_),
@@ -178,15 +179,24 @@ void AMG8833Component::process_frame_() {
   } else if (this->active_) {
     if (++this->lost_ >= this->release_frames_) {
       float travel = this->last_pos_ - this->start_pos_;
-      const char *result = travel >= this->min_travel_ ? "enter" : (travel <= -this->min_travel_ ? "exit" : "ignored");
+      // With a door zone, a pass only counts if the track touched the door edge (position 0):
+      // entering must start in the zone, leaving must end in it.
+      bool use_zone = this->door_zone_ > 0;
+      bool start_in_zone = this->start_pos_ <= this->door_zone_;
+      bool end_in_zone = this->last_pos_ <= this->door_zone_;
+      const char *result = "ignored";
+      if (travel >= this->min_travel_)
+        result = (!use_zone || start_in_zone) ? "enter" : "ignored_side";
+      else if (travel <= -this->min_travel_)
+        result = (!use_zone || end_in_zone) ? "exit" : "ignored_side";
       ESP_LOGD(TAG, "CROSSING,%.2f,%.2f,%.2f,%u,%d,%d,%s", this->start_pos_, this->last_pos_, travel,
                (unsigned) (millis() - this->start_ms_), this->active_frames_, this->max_warm_, result);
-      if (travel >= this->min_travel_) {
+      if (strcmp(result, "enter") == 0) {
         this->entered_++;
         this->count_++;
         ESP_LOGI(TAG, "Person entered (travel %.1f), in room: %d", travel, this->count_);
         this->enter_callbacks_.call();
-      } else if (travel <= -this->min_travel_) {
+      } else if (strcmp(result, "exit") == 0) {
         this->exited_++;
         if (this->count_ > 0)
           this->count_--;

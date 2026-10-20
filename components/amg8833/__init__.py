@@ -36,6 +36,7 @@ CONF_COUNTING = "people_counter"
 CONF_AXIS = "axis"
 CONF_INVERT = "invert"
 CONF_WARM_DELTA = "warm_delta"
+CONF_DOOR_ZONE = "door_zone"
 CONF_BACKGROUND_RATE = "background_rate"
 CONF_AUTO_RECALIBRATE_AFTER = "auto_recalibrate_after"
 CONF_MIN_PIXELS = "min_pixels"
@@ -66,6 +67,7 @@ COUNTING_SCHEMA = cv.Schema(
         cv.Optional(CONF_AXIS, default="columns"): cv.enum(AXES, lower=True),
         cv.Optional(CONF_INVERT, default=False): cv.boolean,
         cv.Optional(CONF_WARM_DELTA, default=2.0): cv.float_range(min=0.5, max=20),
+        cv.Optional(CONF_DOOR_ZONE, default=0.0): cv.float_range(min=0, max=7),
         cv.Optional(CONF_BACKGROUND_RATE, default=0.005): cv.float_range(min=0, max=0.1),
         cv.Optional(CONF_AUTO_RECALIBRATE_AFTER, default="2min"): cv.positive_time_period_milliseconds,
         cv.Optional(CONF_MIN_PIXELS, default=3): cv.int_range(min=1, max=64),
@@ -161,7 +163,7 @@ async def to_code(config):
         c = config[CONF_COUNTING]
         cg.add(var.set_counting(c[CONF_AXIS], c[CONF_INVERT], c[CONF_WARM_DELTA],
                                 c[CONF_MIN_PIXELS], c[CONF_MIN_TRAVEL], c[CONF_RELEASE_FRAMES],
-                                c[CONF_BACKGROUND_RATE], c[CONF_AUTO_RECALIBRATE_AFTER]))
+                                c[CONF_BACKGROUND_RATE], c[CONF_AUTO_RECALIBRATE_AFTER], c[CONF_DOOR_ZONE]))
         for conf in c.get(CONF_ON_ENTER, []):
             trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
             await automation.build_automation(trigger, [], conf)
